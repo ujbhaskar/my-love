@@ -8,9 +8,11 @@ var http = require('http');
 var https = require('https');
 var url = require('url');
 var StringDecoder = require('string_decoder').StringDecoder;
-var config = require('./config');
+var config = require('./lib/config');
 var fs = require('fs');
 var _data = require('./lib/data');
+var handlers = require('./lib/handlers');
+var helpers = require('./lib/helpers');
 
 //TESTING
 // @TODO delete this
@@ -66,10 +68,10 @@ var unifiedServer = function(req,res){
     var trimmedPath = path.replace(/^\/+|\/+$/g,'');
 
     //get the query 
-    var queryStringObject = parsedURL.query;
+    var query = parsedURL.query;
 
     //get the method
-    var method = req.method;
+    var method = req.method.toLowerCase();
 
     //get the headers
     var headers = req.headers;
@@ -90,10 +92,10 @@ var unifiedServer = function(req,res){
         //construct the data object to send to the handler
         var data = {
             trimmedPath:trimmedPath,
-            queryStringObject:queryStringObject,
+            query:query,
             method:method,
             headers:headers,
-            payload:buffer
+            payload:helpers.parseJsonToObject(buffer)
         };
         choosenHandler(data,function(statusCode,payload){
             //use the status code called or default 200
@@ -120,26 +122,9 @@ var unifiedServer = function(req,res){
     });    
 };
 
-//define handlers
-var handlers = {};
-
-//Ping handler
-handlers.ping = function(data,callback){
-    //callback a http status code, payload object
-    callback(200);
-};
-//Sample handler
-handlers.sample = function(data,callback){
-    //callback a http status code, payload object
-    callback(200,{'name':'sample handler'});
-};
-
-//Not found handler
-handlers.notFound = function(data,callback){
-    callback(404);
-}
 //define a request router
 var router = {
     'sample': handlers.sample,
-    'ping':handlers.ping
+    'ping':handlers.ping,
+    'users':handlers.users
 };
