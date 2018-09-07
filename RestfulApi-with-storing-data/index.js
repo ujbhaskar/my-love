@@ -4,17 +4,44 @@
 */
 
 //dependencies
-const http = require('http');
+var http = require('http');
+var https = require('https');
 var url = require('url');
 var StringDecoder = require('string_decoder').StringDecoder;
-//variables
-var tick = 0;
+var config = require('./config');
+var fs = require('fs');
 
-//The server should respond to all request with a string
-const server = http.createServer((req,res)=>{
+
+//Instantiating http Server
+var httpServer = http.createServer((req,res)=>{
+    unifiedServer(req,res);
+});
+
+//Start the http server and listen on port 3000/getting port from config
+httpServer.listen(config.httpPort,()=>{
+    console.log('HTTP server is listening on port: '+config.httpPort+ ' in '+config.envName+ ' mode');
+});
+
+//create https Option
+var httpsServerOptions = {
+    key: fs.readFileSync('./https/key.pem'),
+    cert: fs.readFileSync('./https/cert.pem')
+};
+//Instantiate https server
+var httpsServer = https.createServer(httpsServerOptions,(req,res)=>{
+    unifiedServer(req,res);
+});
+//Start the https server
+httpsServer.listen(config.httpsPort,()=>{
+    console.log('HTTPS server is listening on port: '+config.httpsPort+ ' in '+config.envName+ ' mode');
+});
+
+//All the server logic for both http and https
+var unifiedServer = function(req,res){
+    console.log('in unifiedServer');
     //get the url and parse it
     var parsedURL = url.parse(req.url,true);
-
+    
     //get the path
     var path = parsedURL.pathname;
     var trimmedPath = path.replace(/^\/+|\/+$/g,'');
@@ -89,16 +116,16 @@ const server = http.createServer((req,res)=>{
 
 
     });    
-});
-
-//Start the server and listen on port 3000
-server.listen(3000,()=>{
-    console.log('server is listening on port 3000');
-});
+};
 
 //define handlers
 var handlers = {};
 
+//Ping handler
+handlers.ping = function(data,callback){
+    //callback a http status code, payload object
+    callback(200);
+};
 //Sample handler
 handlers.sample = function(data,callback){
     //callback a http status code, payload object
@@ -107,10 +134,10 @@ handlers.sample = function(data,callback){
 
 //Not found handler
 handlers.notFound = function(data,callback){
-
     callback(404);
 }
 //define a request router
 var router = {
-    'sample': handlers.sample
+    'sample': handlers.sample,
+    'ping':handlers.ping
 };
