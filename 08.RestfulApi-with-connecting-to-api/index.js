@@ -14,6 +14,11 @@ var _data = require('./lib/data');
 var handlers = require('./lib/handlers');
 var helpers = require('./lib/helpers');
 
+//TODO delete later
+helpers.sendTwilioSms('7864864885','Test message for the Twilio api',err=>{
+    console.log('this was the Twilio error: ', err);
+});
+
 //TESTING
 // @TODO delete this
 // _data.create('test','myData',{'a':1,'b':2},(err)=>{

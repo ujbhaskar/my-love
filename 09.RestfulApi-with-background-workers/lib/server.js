@@ -1,5 +1,5 @@
 /*
-* Primary file for the API
+* Server related tasks
 *
 */
 
@@ -8,11 +8,20 @@ var http = require('http');
 var https = require('https');
 var url = require('url');
 var StringDecoder = require('string_decoder').StringDecoder;
-var config = require('./lib/config');
+var config = require('./config');
 var fs = require('fs');
-var _data = require('./lib/data');
-var handlers = require('./lib/handlers');
-var helpers = require('./lib/helpers');
+var _data = require('./data');
+var handlers = require('./handlers');
+var helpers = require('./helpers');
+var path = require('path');
+
+//Instantiate the server module object
+var server = {};
+
+//TODO delete later
+// helpers.sendTwilioSms('7864864885','Test message for the Twilio api',err=>{
+//     console.log('this was the Twilio error: ', err);
+// });
 
 //TESTING
 // @TODO delete this
@@ -34,31 +43,23 @@ var helpers = require('./lib/helpers');
 // })
 
 //Instantiating http Server
-var httpServer = http.createServer((req,res)=>{
-    unifiedServer(req,res);
-});
-
-//Start the http server and listen on port 3000/getting port from config
-httpServer.listen(config.httpPort,()=>{
-    console.log('HTTP server is listening on port: '+config.httpPort+ ' in '+config.envName+ ' mode');
+server.httpServer = http.createServer((req,res)=>{
+    server.unifiedServer(req,res);
 });
 
 //create https Option
-var httpsServerOptions = {
-    key: fs.readFileSync('./https/key.pem'),
-    cert: fs.readFileSync('./https/cert.pem')
+server.httpsServerOptions = {
+    key: fs.readFileSync(path.join(__dirname,'/../https/key.pem')),
+    cert: fs.readFileSync(path.join(__dirname,'/../https/cert.pem'))
 };
 //Instantiate https server
-var httpsServer = https.createServer(httpsServerOptions,(req,res)=>{
-    unifiedServer(req,res);
-});
-//Start the https server
-httpsServer.listen(config.httpsPort,()=>{
-    console.log('HTTPS server is listening on port: '+config.httpsPort+ ' in '+config.envName+ ' mode');
+server.httpsServer = https.createServer(server.httpsServerOptions,(req,res)=>{
+    server.unifiedServer(req,res);
 });
 
+
 //All the server logic for both http and https
-var unifiedServer = function(req,res){
+server.unifiedServer = function(req,res){
     //get the url and parse it
     var parsedURL = url.parse(req.url,true);
     
@@ -85,7 +86,7 @@ var unifiedServer = function(req,res){
         buffer += decoder.end();
 
         //choose the handler this request should go
-        var choosenHandler = typeof(router[trimmedPath])!== 'undefined'? router[trimmedPath] : handlers.notFound;
+        var choosenHandler = typeof(server.router[trimmedPath])!== 'undefined'? server.router[trimmedPath] : handlers.notFound;
 
         //construct the data object to send to the handler
         var data = {
@@ -118,10 +119,27 @@ var unifiedServer = function(req,res){
 };
 
 //define a request router
-var router = {
+server.router = {
     sample: handlers.sample,
     ping:handlers.ping,
     users:handlers.users,
     tokens: handlers.tokens,
     checks: handlers.checks
 };
+
+
+// Init the server
+server.init = ()=>{
+    //Start the http server and listen on port 3000/getting port from config
+    server.httpServer.listen(config.httpPort,()=>{
+        console.log('HTTP server is listening on port: '+config.httpPort+ ' in '+config.envName+ ' mode');
+    });
+
+    //Start the https server
+    server.httpsServer.listen(config.httpsPort,()=>{
+        console.log('HTTPS server is listening on port: '+config.httpsPort+ ' in '+config.envName+ ' mode');
+    });
+}
+
+//Export the server module
+module.exports = server;
